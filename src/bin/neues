@@ -3,8 +3,11 @@
 
 import argparse
 import sys
+import textwrap
+from xml.dom import pulldom
 
 import feedparser
+from bs4 import BeautifulSoup
 
 from neuepy import cli
 
@@ -14,17 +17,52 @@ def build_args():
     args_parser.add_argument('-F', '--feed', help='a feed to pull')
     return args_parser
 
-def redraw(term, feed, selection=0):
-    term.clear()
-    title = "{term.bold}{} - {}{term.normal}".format(feed['feed']['title'],
-                                                     feed['feed']['link'],
-                                                     term = term)
-    term.print(title)
-    for index, entry in enumerate(feed.entries):
-        if index == selection:
-            print('> ' + entry.title)
-        else:
-            print('  {}'.format(entry.title))
+def show_content(feed, selection):
+    term = cli.Term()
+    with term.fullscreen():
+        term.clear()
+        print(term.move(0, 0))
+
+        entry = feed.entries[selection]
+        year, month, day = entry.published_parsed[0:3]
+        published_date = '{} {:>2} {:>2}'.format(year, month, day)
+        title = "{term.bold}{} - {}{term.normal}".format(entry.title,
+                                                         published_date,
+                                                         term = term)
+        print(title)
+        soup = BeautifulSoup(entry.summary)
+
+        line_count = 2
+        for p in [' '.join(e.stripped_strings) for e in soup.find_all('p')]:
+            for line in textwrap.wrap(p, width=term.width - 2):
+                if line_count > term.height:
+                    break
+                print(line)
+                line_count += 1
+        term.getch()
+        entry_list(feed, selection)
+
+def entry_list(feed, selection=0):
+    term = cli.Term()
+    with term.fullscreen():
+        term.clear()
+        title = "{term.bold}{} - {}{term.normal}".format(feed['feed']['title'],
+                                                         feed['feed']['link'],
+                                                         term = term)
+        term.print(title)
+        for index, entry in enumerate(feed.entries):
+            text_pad = '  '
+            if index == selection:
+                text_pad = '> '
+            # Holds the size we should be padding for the date.
+            year, month, day = entry.published_parsed[0:3]
+            published_date = '{} {:>2} {:>2}'.format(year, month, day)
+            padded_date_width = '{}'.format(term.width -
+                                            len(text_pad) -
+                                            len(entry.title))
+            entry_line = ("{}{:>" + padded_date_width + "}").format(entry.title,
+                                                                    published_date)
+            print("{}{}".format(text_pad, entry_line))
 
 def main():
     args_parser = build_args()
@@ -37,18 +75,18 @@ def main():
     selection = 0
     c = ' '
     while(c != 'q'):
-        with term.fullscreen():
-            print(term.move(0, 0))
-            redraw(term, feed, selection)
-            c = term.getch()
-            if c == 'j':
-                selection += 1
-            elif c == 'k':
-                selection -= 1
-            if selection > len(feed.entries) - 1:
-                selection = 0
-            elif selection < 0:
-                selection = len(feed.entries) - 1
+        entry_list(feed, selection)
+        c = term.getch()
+        if c == 'j':
+            selection += 1
+        elif c == 'k':
+            selection -= 1
+        elif c == 'l':
+            show_content(feed, selection)
+        if selection > len(feed.entries) - 1:
+            selection = 0
+        elif selection < 0:
+            selection = len(feed.entries) - 1
 
 if __name__ == '__main__':
     main()

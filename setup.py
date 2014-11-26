@@ -10,6 +10,7 @@ setup(
     install_requires = [
         'feedparser>=5.1.0',
         'pyyaml>=3.10',
+        'beautifulsoup4>=4.2',
         'blessings>=1.6',
     ],
 

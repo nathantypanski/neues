@@ -41,4 +41,3 @@ class Term(object):
                 return self._term.__getattr__(name)
             except:
                 raise
-
