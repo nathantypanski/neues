@@ -14,6 +14,18 @@ def build_args():
     args_parser.add_argument('-F', '--feed', help='a feed to pull')
     return args_parser
 
+def redraw(term, feed, selection=0):
+    term.clear()
+    title = "{term.bold}{} - {}{term.normal}".format(feed['feed']['title'],
+                                                     feed['feed']['link'],
+                                                     term = term)
+    term.print(title)
+    for index, entry in enumerate(feed.entries):
+        if index == selection:
+            print('> ' + entry.title)
+        else:
+            print('  {}'.format(entry.title))
+
 def main():
     args_parser = build_args()
     if 1 == len(sys.argv):
@@ -22,13 +34,21 @@ def main():
     args = args_parser.parse_args()
     term = cli.Term()
     feed = feedparser.parse(args.feed)
-    with term.fullscreen():
-        title = term.bold("{} - {}".format(feed['feed']['title'],
-                                           feed['feed']['link']))
-        print(title)
-        for entry in feed.entries:
-            print(entry.title)
-        cli.getch()
+    selection = 0
+    c = ' '
+    while(c != 'q'):
+        with term.fullscreen():
+            print(term.move(0, 0))
+            redraw(term, feed, selection)
+            c = term.getch()
+            if c == 'j':
+                selection += 1
+            elif c == 'k':
+                selection -= 1
+            if selection > len(feed.entries) - 1:
+                selection = 0
+            elif selection < 0:
+                selection = len(feed.entries) - 1
 
 if __name__ == '__main__':
     main()
