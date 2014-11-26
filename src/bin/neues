@@ -1,0 +1,34 @@
+#!/usr/bin/env python3
+"""neuepy - advanced rss newsreader from the 1990s"""
+
+import argparse
+import sys
+
+import feedparser
+
+from neuepy import cli
+
+def build_args():
+    args_parser = argparse.ArgumentParser(
+        description='neuepy - advanced rss newsreader from the 1990s')
+    args_parser.add_argument('-F', '--feed', help='a feed to pull')
+    return args_parser
+
+def main():
+    args_parser = build_args()
+    if 1 == len(sys.argv):
+        args_parser.print_help()
+        exit(1)
+    args = args_parser.parse_args()
+    term = cli.Term()
+    feed = feedparser.parse(args.feed)
+    with term.fullscreen():
+        title = term.bold("{} - {}".format(feed['feed']['title'],
+                                           feed['feed']['link']))
+        print(title)
+        for entry in feed.entries:
+            print(entry.title)
+        cli.getch()
+
+if __name__ == '__main__':
+    main()
